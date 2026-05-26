@@ -1,0 +1,829 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PSB 360° Survey</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #f9f5ef; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="env,react">
+    const { useState } = React;
+
+// ─── AIRTABLE CONFIGURATION ───────────────────────────────────────────────────
+// Paste your credentials here after following the setup guide
+const AIRTABLE_KEY     = "patCWPrnLXFJUn9zO.37b0af530af89d673f082dbf3aa285e2675a804d1e7fc2c10810fd31d998d49e";
+const AIRTABLE_BASE_ID = "app0lgdYTTRLR4SRi";
+const TABLE_INTERNAL   = "Internal Responses";
+const TABLE_EXTERNAL   = "External Responses";
+// ─────────────────────────────────────────────────────────────────────────────
+
+const C = {
+  ink:     "#1c1f1a",
+  bark:    "#2e3b2a",
+  fern:    "#3d5c37",
+  leaf:    "#5a8a50",
+  sage:    "#8ab87e",
+  mist:    "#c8ddc2",
+  cream:   "#f7f2ea",
+  parch:   "#ede5d3",
+  sand:    "#f9f5ef",
+  amber:   "#c4792a",
+  apricot: "#e8956a",
+  rust:    "#9b3f20",
+  gold:    "#d4a535",
+  white:   "#ffffff",
+};
+
+const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;700&display=swap');`;
+
+const F = {
+  display: "'Cormorant Garamond', Georgia, serif",
+  body:    "'DM Sans', sans-serif",
+};
+
+const CHANNELS_EN = ["WhatsApp", "Email", "Instagram", "Facebook", "LinkedIn", "YouTube"];
+const CHANNELS_ES = ["WhatsApp", "Correo electrónico", "Instagram", "Facebook", "LinkedIn", "YouTube"];
+
+// ─── Survey builder ───────────────────────────────────────────────────────────
+
+function buildSurveys(lang) {
+  const en = lang === "en";
+
+  const q = (id, text, type, opts) => ({
+    id,
+    text,
+    type: type || "likert",
+    opts: opts || null,
+  });
+
+  const likertLabels = en
+    ? ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]
+    : ["Totalmente en desacuerdo", "En desacuerdo", "Neutral", "De acuerdo", "Totalmente de acuerdo"];
+
+  const freqLabels = en
+    ? ["Never", "Rarely", "Sometimes", "Often", "Always"]
+    : ["Nunca", "Raramente", "A veces", "Con frecuencia", "Siempre"];
+
+  const mktgOptions = {
+    en: ["Trade shows & events", "Website & SEO", "Social media (LinkedIn/Instagram)", "Technical publications & bulletins", "Email / newsletter campaigns", "Field visits & variety demos", "Print catalogues", "Industry press & PR"],
+    es: ["Ferias y eventos", "Sitio web y SEO", "Redes sociales (LinkedIn/Instagram)", "Publicaciones y boletines técnicos", "Campañas de email / newsletter", "Visitas de campo y demostraciones", "Catálogos impresos", "Prensa sectorial y relaciones públicas"],
+  };
+
+  const infoOptions = {
+    en: ["Variety technical sheets", "Production & agronomic guides", "Commercial pricing & royalty info", "Trial data & performance results", "Consumer taste & preference studies", "Market trend reports", "Regulatory & PVR updates", "Event & trade show invitations"],
+    es: ["Fichas técnicas de variedades", "Guías de producción y agronómicas", "Información comercial y de regalías", "Datos de ensayos y resultados", "Estudios de preferencias del consumidor", "Informes de tendencias de mercado", "Actualizaciones regulatorias y DOV", "Invitaciones a eventos y ferias"],
+  };
+
+  const internal = {
+    title:           en ? "Internal 360° Survey" : "Encuesta Interna 360°",
+    subtitle:        en ? "PSB Producción Vegetal — Employee & Team Feedback" : "PSB Producción Vegetal — Feedback del Equipo",
+    intro:           en
+      ? "This confidential survey helps PSB understand how we are performing across strategy, innovation, commercial execution, culture and marketing. Your honest input shapes how we grow. All responses are anonymous."
+      : "Esta encuesta confidencial ayuda a PSB a comprender nuestro desempeño en estrategia, innovación, ejecución comercial, cultura y marketing. Tu aportación honesta define cómo crecemos. Todas las respuestas son anónimas.",
+    rolePlaceholder: en ? "e.g. R&D, Commercial, Operations, Marketing…" : "Ej. I+D, Comercial, Operaciones, Marketing…",
+    deptPlaceholder: en ? "e.g. Spain, France, Italy, Chile…" : "Ej. España, Francia, Italia, Chile…",
+    sections: [
+      {
+        id: "leadership", icon: "🌱",
+        title: en ? "Leadership & Strategic Direction" : "Liderazgo y Dirección Estratégica",
+        questions: [
+          q("l1", en ? "Leadership communicates a clear and inspiring vision for PSB's future." : "La dirección comunica una visión clara e inspiradora para el futuro de PSB."),
+          q("l2", en ? "Strategic decisions involve adequate input from relevant teams." : "Las decisiones estratégicas incorporan la participación adecuada de los equipos relevantes."),
+          q("l3", en ? "I am confident in the direction PSB is heading over the next 3–5 years." : "Confío en la dirección que está tomando PSB en los próximos 3–5 años."),
+          q("l4", en ? "Leadership demonstrates genuine commitment to innovation in our variety pipeline." : "La dirección demuestra un compromiso genuino con la innovación en nuestra cartera de variedades."),
+          q("l5", en ? "Leadership makes PSB's commercial priorities and goals visible to the whole team." : "La dirección hace visibles las prioridades comerciales y los objetivos de PSB para todo el equipo."),
+          q("l6", en ? "What is the most important strategic priority PSB should focus on in the next 12 months?" : "¿Cuál es la prioridad estratégica más importante en la que PSB debería enfocarse en los próximos 12 meses?", "text"),
+        ],
+      },
+      {
+        id: "rnd", icon: "🔬",
+        title: en ? "R&D & Innovation Pipeline" : "I+D y Pipeline de Innovación",
+        questions: [
+          q("r1", en ? "Our breeding programme generates varieties that meet current and future market demands." : "Nuestro programa de mejora genética genera variedades que satisfacen las demandas actuales y futuras del mercado."),
+          q("r2", en ? "Stage-gate processes are clear, consistently applied and understood across teams." : "Los procesos stage-gate son claros, se aplican de forma consistente y están bien comprendidos."),
+          q("r3", en ? "We have adequate resources (budget, staff, tools) to deliver our R&D pipeline." : "Contamos con recursos adecuados (presupuesto, personal, herramientas) para cumplir con nuestro pipeline de I+D."),
+          q("r4", en ? "R&D and commercial teams collaborate effectively on variety selection and launch priorities." : "Los equipos de I+D y comercial colaboran eficazmente en la selección de variedades y prioridades de lanzamiento."),
+          q("r5", en ? "Innovation decisions are driven by clear market intelligence and customer feedback." : "Las decisiones de innovación están impulsadas por inteligencia de mercado clara y feedback de los clientes."),
+          q("r6", en ? "Where do you see the biggest gaps in our current variety pipeline?" : "¿Dónde ves las mayores carencias en nuestra cartera actual de variedades?", "text"),
+        ],
+      },
+      {
+        id: "commercial", icon: "📈",
+        title: en ? "Commercial & Revenue Growth" : "Crecimiento Comercial y de Ingresos",
+        questions: [
+          q("c1", en ? "Our commercial team effectively communicates PSB's variety value proposition to clients." : "El equipo comercial comunica eficazmente la propuesta de valor de las variedades de PSB a los clientes."),
+          q("c2", en ? "Our licensing and royalty models are competitive and structured for long-term growth." : "Nuestros modelos de licencias y regalías son competitivos y están estructurados para el crecimiento a largo plazo."),
+          q("c3", en ? "We have adequate visibility into our commercial pipeline and revenue forecasts." : "Tenemos visibilidad adecuada sobre el pipeline comercial y las previsiones de ingresos."),
+          q("c4", en ? "We are effective at converting trial agreements into long-term licensing deals." : "Somos eficaces en la conversión de acuerdos de prueba en contratos de licencia a largo plazo."),
+          q("c5", en ? "Commercial and R&D teams are well aligned on prioritisation of new variety releases." : "Los equipos comercial y de I+D están bien alineados en la priorización de los lanzamientos de nuevas variedades."),
+          q("c6", en ? "What is the single biggest commercial opportunity PSB is not currently capitalising on?" : "¿Cuál es la mayor oportunidad comercial que PSB no está aprovechando actualmente?", "text"),
+        ],
+      },
+      {
+        id: "operations", icon: "⚙️",
+        title: en ? "Operations & IP" : "Operaciones y Propiedad Intelectual",
+        questions: [
+          q("o1", en ? "Our operational processes are efficient, well-documented and consistently followed." : "Nuestros procesos operativos son eficientes, están bien documentados y se siguen de manera consistente."),
+          q("o2", en ? "Quality standards in variety production and distribution are consistently upheld." : "Los estándares de calidad en la producción y distribución de variedades se mantienen de forma consistente."),
+          q("o3", en ? "Nursery partner relationships are well managed and contractually sound." : "Las relaciones con los viveros asociados están bien gestionadas y son contractualmente sólidas."),
+          q("o4", en ? "Our IP protection practices (PVR, trademarks, trade secrets) are robust and enforced." : "Nuestras prácticas de protección de PI (DOV, marcas, secretos comerciales) son sólidas y se hacen cumplir."),
+          q("o5", en ? "Which operational area most urgently needs improvement?" : "¿Qué área operativa necesita mejora con más urgencia?", "text"),
+        ],
+      },
+      {
+        id: "culture", icon: "🤝",
+        title: en ? "Culture & People" : "Cultura y Personas",
+        questions: [
+          q("cu1", en ? "PSB has a culture of accountability, ownership and follow-through." : "PSB tiene una cultura de responsabilidad, compromiso y seguimiento."),
+          q("cu2", en ? "Teams collaborate effectively across departments and geographies." : "Los equipos colaboran eficazmente entre departamentos y zonas geográficas."),
+          q("cu3", en ? "I feel empowered to raise ideas, concerns or challenges with leadership." : "Me siento con libertad para plantear ideas, inquietudes o retos a la dirección."),
+          q("cu4", en ? "Onboarding and professional development practices set people up for success." : "Las prácticas de incorporación y desarrollo profesional preparan bien a las personas para el éxito."),
+          q("cu5", en ? "PSB's culture supports creativity, experimentation and calculated risk-taking." : "La cultura de PSB fomenta la creatividad, la experimentación y la asunción de riesgos calculados."),
+          q("cu6", en ? "How would you describe PSB's culture in three words?" : "¿Cómo describirías la cultura de PSB en tres palabras?", "text"),
+        ],
+      },
+      {
+        id: "comms_int", icon: "💬",
+        title: en ? "Internal Communication & Processes" : "Comunicación Interna y Procesos",
+        questions: [
+          q("ci1", en ? "Internal communication is timely, clear and relevant to my work." : "La comunicación interna es puntual, clara y relevante para mi trabajo."),
+          q("ci2", en ? "Meeting cadences and reporting structures are effective and not wasteful." : "La frecuencia de reuniones y las estructuras de reporte son eficaces y no suponen una pérdida de tiempo."),
+          q("ci3", en ? "I have access to the information I need to do my job well." : "Tengo acceso a la información que necesito para hacer bien mi trabajo."),
+          q("ci4", en ? "Decision-making processes are transparent and consistently applied." : "Los procesos de toma de decisiones son transparentes y se aplican de manera consistente."),
+          q("ci5", en ? "What one change to internal communication or processes would have the most impact?" : "¿Qué cambio en la comunicación interna o en los procesos tendría el mayor impacto?", "text"),
+        ],
+      },
+      {
+        id: "brand_int", icon: "🎯",
+        title: en ? "Brand Identity & Market Positioning" : "Identidad de Marca y Posicionamiento",
+        questions: [
+          q("bi1", en ? "PSB has a clear and distinctive brand identity that sets us apart from competitors." : "PSB tiene una identidad de marca clara y distintiva que nos diferencia de los competidores."),
+          q("bi2", en ? "Our brand accurately reflects the quality and innovation of our variety portfolio." : "Nuestra marca refleja con precisión la calidad y la innovación de nuestra cartera de variedades."),
+          q("bi3", en ? "PSB is well-known and respected among nurseries, growers and industry stakeholders." : "PSB es bien conocida y respetada entre los viveros, productores y actores del sector."),
+          q("bi4", en ? "I am proud to represent the PSB brand externally (at trade shows, with clients, etc.)." : "Me siento orgulloso/a de representar la marca PSB externamente (en ferias, con clientes, etc.)."),
+          q("bi5", en ? "PSB's brand positioning across key fruit categories (peach, nectarine, plum, cherry, apricot) is strong and consistent." : "El posicionamiento de la marca PSB en las categorías clave (melocotón, nectarina, ciruela, cereza, albaricoque) es sólido y consistente."),
+          q("bi6", en ? "How would you describe the PSB brand to someone outside the industry?" : "¿Cómo describirías la marca PSB a alguien ajeno al sector?", "text"),
+        ],
+      },
+      {
+        id: "mktg_int", icon: "📣",
+        title: en ? "Marketing Strategy & Effectiveness" : "Estrategia y Eficacia del Marketing",
+        questions: [
+          q("mi1", en ? "PSB has a coherent, well-resourced marketing strategy." : "PSB cuenta con una estrategia de marketing coherente y bien dotada de recursos."),
+          q("mi2", en ? "Marketing activities generate meaningful commercial leads and business opportunities." : "Las actividades de marketing generan contactos comerciales y oportunidades de negocio significativas."),
+          q("mi3", en ? "Our marketing materials (variety catalogues, technical sheets, presentations) are high quality and up to date." : "Nuestros materiales de marketing (catálogos, fichas técnicas, presentaciones) son de alta calidad y están actualizados."),
+          q("mi4", en ? "The amount of marketing content we produce is sufficient to support our commercial goals." : "La cantidad de contenido de marketing que producimos es suficiente para respaldar nuestros objetivos comerciales."),
+          q("mi5", en ? "Our marketing team has the tools and budget needed to be effective." : "El equipo de marketing dispone de las herramientas y el presupuesto necesarios para ser eficaz."),
+          q("mi6", en ? "Which marketing activity delivers the most value for PSB? (select all that apply)" : "¿Qué actividad de marketing aporta más valor a PSB? (selecciona todas las que apliquen)", "multi", { options: mktgOptions[lang] }),
+          q("mi7", en ? "What marketing efforts should PSB start, stop or significantly improve?" : "¿Qué esfuerzos de marketing debería PSB iniciar, detener o mejorar significativamente?", "text"),
+        ],
+      },
+      {
+        id: "digital_int", icon: "🌐",
+        title: en ? "Digital Presence & Content" : "Presencia Digital y Contenidos",
+        questions: [
+          q("di1", en ? "PSB's website effectively represents our variety portfolio and company positioning." : "El sitio web de PSB representa eficazmente nuestra cartera de variedades y el posicionamiento de la empresa."),
+          q("di2", en ? "The website is easy to navigate and provides the information clients and partners need." : "El sitio web es fácil de navegar y proporciona la información que necesitan clientes y socios."),
+          q("di3", en ? "PSB's social media presence (LinkedIn, Instagram, etc.) is active, professional and relevant." : "La presencia de PSB en redes sociales (LinkedIn, Instagram, etc.) es activa, profesional y relevante."),
+          q("di4", en ? "We publish sufficient digital content (variety news, trial updates, industry insights) to maintain visibility." : "Publicamos suficiente contenido digital (noticias de variedades, actualizaciones de ensayos, perspectivas del sector) para mantener visibilidad."),
+          q("di5", en ? "PSB's digital assets (photos, videos, technical data) are of professional quality and easy to access internally." : "Los activos digitales de PSB (fotos, vídeos, datos técnicos) son de calidad profesional y fáciles de acceder internamente."),
+          q("di6", en ? "How often do you use or share PSB's digital content with external stakeholders?" : "¿Con qué frecuencia utilizas o compartes el contenido digital de PSB con partes externas?", "freq"),
+          q("di7", en ? "What type of digital content would most help you in your day-to-day work?" : "¿Qué tipo de contenido digital te ayudaría más en tu trabajo diario?", "text"),
+        ],
+      },
+      {
+        id: "events_int", icon: "🏆",
+        title: en ? "Trade Shows, Events & Publications" : "Ferias, Eventos y Publicaciones",
+        questions: [
+          q("ei1", en ? "PSB is present at the right trade shows and industry events for our target markets." : "PSB está presente en las ferias y eventos del sector adecuados para nuestros mercados objetivo."),
+          q("ei2", en ? "Our presence at trade shows and events is well organised, professional and impactful." : "Nuestra presencia en ferias y eventos está bien organizada, es profesional y tiene impacto."),
+          q("ei3", en ? "PSB publishes or contributes to industry journals, technical bulletins or research papers effectively." : "PSB publica o contribuye eficazmente en revistas sectoriales, boletines técnicos o artículos de investigación."),
+          q("ei4", en ? "Field days, variety demos and grower visits are used effectively as marketing tools." : "Los días de campo, las demostraciones de variedades y las visitas de productores se utilizan eficazmente como herramientas de marketing."),
+          q("ei5", en ? "Which events or trade shows should PSB prioritise or attend that we currently miss?" : "¿Qué eventos o ferias debería priorizar o incorporar PSB que actualmente no cubra?", "text"),
+        ],
+      },
+      {
+        id: "improve_int", icon: "💡",
+        title: en ? "Improvement & Innovation Ideas" : "Ideas de Mejora e Innovación",
+        questions: [
+          q("ii1", en ? "I feel the company actively listens to and acts on employee feedback." : "Siento que la empresa escucha activamente el feedback de los empleados y actúa en consecuencia."),
+          q("ii2", en ? "PSB benchmarks itself against competitors and industry best practices regularly." : "PSB se compara con los competidores y las mejores prácticas del sector de forma regular."),
+          q("ii3", en ? "There are clear processes for surfacing and evaluating new ideas within PSB." : "Existen procesos claros para identificar y evaluar nuevas ideas dentro de PSB."),
+          q("ii4", en ? "If you could change one thing about how PSB presents itself to the market, what would it be?" : "Si pudieras cambiar una cosa sobre cómo PSB se presenta al mercado, ¿qué sería?", "text"),
+          q("ii5", en ? "What marketing or commercial initiative have you seen a competitor do that PSB should consider?" : "¿Qué iniciativa de marketing o comercial has visto hacer a un competidor que PSB debería considerar?", "text"),
+          q("ii6", en ? "What is the single most impactful thing PSB could do in the next 12 months to grow its reputation and reach?" : "¿Cuál es la acción de mayor impacto que PSB podría realizar en los próximos 12 meses para aumentar su reputación y alcance?", "text"),
+        ],
+      },
+    ],
+  };
+
+  const external = {
+    title:           en ? "Partner 360° Survey" : "Encuesta Externa 360°",
+    subtitle:        en ? "PSB Producción Vegetal — Nursery & Client Feedback" : "PSB Producción Vegetal — Feedback de Viveros y Clientes",
+    intro:           en
+      ? "PSB Producción Vegetal is committed to building strong, long-term partnerships. This survey helps us understand how well we serve you and what we can do better. All responses are strictly confidential — only PSB management sees the results."
+      : "PSB Producción Vegetal está comprometida con la construcción de alianzas sólidas y duraderas. Esta encuesta nos ayuda a entender cómo te servimos y qué podemos mejorar. Todas las respuestas son estrictamente confidenciales; solo la dirección de PSB ve los resultados.",
+    rolePlaceholder: en ? "e.g. Nursery, Grower, Distributor, Cooperative…" : "Ej. Vivero, Productor, Distribuidor, Cooperativa…",
+    deptPlaceholder: en ? "e.g. Spain, France, Italy, Chile…" : "Ej. España, Francia, Italia, Chile…",
+    sections: [
+      {
+        id: "portfolio", icon: "🍑",
+        title: en ? "Variety Portfolio & Innovation" : "Cartera de Variedades e Innovación",
+        questions: [
+          q("p1", en ? "PSB's variety portfolio meets the needs of your market and region." : "La cartera de variedades de PSB satisface las necesidades de tu mercado y región."),
+          q("p2", en ? "New releases from PSB represent meaningful agronomic and commercial improvement." : "Las nuevas variedades de PSB representan una mejora agronómica y comercial significativa."),
+          q("p3", en ? "PSB variety trials provide sufficient data to make informed commercialisation decisions." : "Los ensayos de variedades de PSB aportan datos suficientes para tomar decisiones de comercialización informadas."),
+          q("p4", en ? "PSB is proactive in developing varieties for emerging consumer preferences (taste, appearance, shelf life)." : "PSB es proactiva en el desarrollo de variedades que responden a las preferencias emergentes del consumidor (sabor, apariencia, vida útil)."),
+          q("p5", en ? "PSB's variety pipeline gives us confidence in the long-term business relationship." : "El pipeline de variedades de PSB nos da confianza en la relación comercial a largo plazo."),
+          q("p6", en ? "Which fruit type or market segment would you most like to see PSB invest in?" : "¿En qué tipo de fruta o segmento de mercado te gustaría ver más inversión por parte de PSB?", "text"),
+        ],
+      },
+      {
+        id: "commercial_ext", icon: "🤝",
+        title: en ? "Commercial Relationship" : "Relación Comercial",
+        questions: [
+          q("cr1", en ? "Your commercial terms with PSB (royalties, licensing structure) are fair and transparent." : "Las condiciones comerciales con PSB (regalías, estructura de licencias) son justas y transparentes."),
+          q("cr2", en ? "Contract processes with PSB are efficient and easy to navigate." : "Los procesos de contratación con PSB son eficientes y fáciles de gestionar."),
+          q("cr3", en ? "PSB responds promptly and professionally to commercial enquiries." : "PSB responde con rapidez y profesionalidad a las consultas comerciales."),
+          q("cr4", en ? "You feel treated as a valued, long-term partner by PSB." : "Me siento tratado como un socio valioso y a largo plazo por parte de PSB."),
+          q("cr5", en ? "PSB proactively offers new commercial opportunities and variety introductions." : "PSB ofrece de forma proactiva nuevas oportunidades comerciales e introducciones de variedades."),
+          q("cr6", en ? "What could PSB do to strengthen your commercial relationship?" : "¿Qué podría hacer PSB para fortalecer la relación comercial contigo?", "text"),
+        ],
+      },
+      {
+        id: "technical", icon: "🌿",
+        title: en ? "Technical & Agronomic Support" : "Soporte Técnico y Agronómico",
+        questions: [
+          q("t1", en ? "PSB provides adequate technical documentation for its varieties (production guides, disease tolerance data, etc.)." : "PSB proporciona documentación técnica adecuada para sus variedades (guías de producción, datos de tolerancia a enfermedades, etc.)."),
+          q("t2", en ? "PSB field representatives are knowledgeable and accessible when needed." : "Los representantes técnicos de campo de PSB son competentes y accesibles cuando se necesitan."),
+          q("t3", en ? "When issues arise in the field, PSB responds with urgency and appropriate expertise." : "Cuando surgen problemas en el campo, PSB responde con urgencia y la experiencia apropiada."),
+          q("t4", en ? "Trial management and agronomic data-sharing processes are well organised." : "La gestión de ensayos y el intercambio de datos agronómicos están bien organizados."),
+          q("t5", en ? "What technical or agronomic support would you find most valuable from PSB?" : "¿Qué soporte técnico o agronómico te resultaría más valioso de PSB?", "text"),
+        ],
+      },
+      {
+        id: "ip_ext", icon: "🛡️",
+        title: en ? "IP Compliance & Nursery Practices" : "Cumplimiento de PI y Prácticas de Vivero",
+        questions: [
+          q("ip1", en ? "PSB's IP protection requirements (labelling, reporting, audit processes) are clearly explained." : "Los requisitos de protección de PI de PSB (etiquetado, informes, procesos de auditoría) están claramente explicados."),
+          q("ip2", en ? "Compliance requirements are reasonable and proportionate to the relationship." : "Los requisitos de cumplimiento son razonables y proporcionados a la relación."),
+          q("ip3", en ? "PSB's nursery certification or approval processes are well managed and transparent." : "Los procesos de certificación o aprobación de viveros de PSB están bien gestionados y son transparentes."),
+          q("ip4", en ? "You are confident that PSB's IP framework protects both parties appropriately." : "Confío en que el marco de PI de PSB protege adecuadamente a ambas partes."),
+          q("ip5", en ? "Are there aspects of PSB's IP or compliance practices that need clarification or improvement?" : "¿Hay aspectos de las prácticas de PI o cumplimiento de PSB que necesiten aclaración o mejora?", "text"),
+        ],
+      },
+      {
+        id: "brand_ext", icon: "🎯",
+        title: en ? "Brand Perception & Market Image" : "Percepción de Marca e Imagen de Mercado",
+        questions: [
+          q("be1", en ? "PSB is recognised as a leading stone fruit breeder in your market." : "PSB es reconocida como una empresa líder en obtención vegetal de fruta de hueso en tu mercado."),
+          q("be2", en ? "The PSB brand conveys quality, reliability and innovation." : "La marca PSB transmite calidad, fiabilidad e innovación."),
+          q("be3", en ? "PSB is clearly differentiated from other breeders you work with." : "PSB se diferencia claramente de otros obtentores con los que trabajas."),
+          q("be4", en ? "The PSB brand makes it easier to sell its varieties to growers and retailers in your region." : "La marca PSB facilita la venta de sus variedades a productores y distribuidores en tu región."),
+          q("be5", en ? "How would you describe the PSB brand to a new grower considering working with us?" : "¿Cómo describirías la marca PSB a un nuevo productor que esté considerando trabajar con nosotros?", "text"),
+        ],
+      },
+      {
+        id: "mktg_ext", icon: "📣",
+        title: en ? "Marketing Materials & Information Quality" : "Materiales de Marketing y Calidad de la Información",
+        questions: [
+          q("me1", en ? "The marketing materials you receive from PSB (catalogues, variety sheets, presentations) are professional and useful." : "Los materiales de marketing que recibes de PSB (catálogos, fichas de variedades, presentaciones) son profesionales y útiles."),
+          q("me2", en ? "The amount of information PSB provides is adequate — not too little, not overwhelming." : "La cantidad de información que proporciona PSB es adecuada: ni demasiado escasa ni abrumadora."),
+          q("me3", en ? "The technical and commercial data PSB provides is accurate, clear and actionable." : "Los datos técnicos y comerciales que proporciona PSB son precisos, claros y accionables."),
+          q("me4", en ? "PSB keeps you well-informed about new variety releases and pipeline updates in a timely manner." : "PSB te mantiene bien informado sobre nuevos lanzamientos de variedades y actualizaciones del pipeline de manera oportuna."),
+          q("me5", en ? "PSB communicates clearly about changes to royalty structures, compliance requirements or contractual terms." : "PSB comunica con claridad los cambios en las estructuras de regalías, requisitos de cumplimiento o condiciones contractuales."),
+          q("me6", en ? "Which type of information from PSB do you find most valuable? (select all that apply)" : "¿Qué tipo de información de PSB encuentras más valiosa? (selecciona todas las que apliquen)", "multi", { options: infoOptions[lang] }),
+          q("me7", en ? "What information do you wish PSB provided but currently does not?" : "¿Qué información desearías que PSB proporcionara y actualmente no lo hace?", "text"),
+        ],
+      },
+      {
+        id: "digital_ext", icon: "🌐",
+        title: en ? "Digital Presence: Website & Social Media" : "Presencia Digital: Web y Redes Sociales",
+        questions: [
+          q("de1", en ? "PSB's website is easy to navigate and I can find the information I need." : "El sitio web de PSB es fácil de navegar y puedo encontrar la información que necesito."),
+          q("de2", en ? "PSB's website effectively showcases the variety portfolio with sufficient detail." : "El sitio web de PSB presenta eficazmente la cartera de variedades con suficiente detalle."),
+          q("de3", en ? "How often do you visit PSB's website to find variety information or news?" : "¿Con qué frecuencia visitas el sitio web de PSB para encontrar información sobre variedades o noticias?", "freq"),
+          q("de4", en ? "PSB's presence on social media (LinkedIn, Instagram, etc.) is professional and adds value." : "La presencia de PSB en redes sociales (LinkedIn, Instagram, etc.) es profesional y aporta valor."),
+          q("de5", en ? "How often do you follow or engage with PSB on social media?" : "¿Con qué frecuencia sigues o interactúas con PSB en redes sociales?", "freq"),
+          q("de6", en ? "Digital communications from PSB (emails, newsletters, social posts) are relevant and not excessive." : "Las comunicaciones digitales de PSB (emails, newsletters, publicaciones en redes) son relevantes y no excesivas."),
+          q("de7", en ? "What would make PSB's website or social media more useful to you?" : "¿Qué haría que el sitio web o las redes sociales de PSB te resultaran más útiles?", "text"),
+        ],
+      },
+      {
+        id: "channels", icon: "📡",
+        title: en ? "Communication Channels" : "Canales de Comunicación",
+        questions: [
+          q("ch1", en ? "How do you currently receive news or information from PSB? (select all that apply)" : "¿Cómo recibes actualmente las noticias o la información de PSB? (selecciona todas las que apliquen)", "multi", { options: en ? CHANNELS_EN : CHANNELS_ES }),
+          q("ch2", en ? "What is your preferred or most-used channel for receiving information from PSB?" : "¿Cuál es tu canal preferido o el que más utilizas para recibir información de PSB?", "single", { options: en ? CHANNELS_EN : CHANNELS_ES }),
+        ],
+      },
+      {
+        id: "events_ext", icon: "🏆",
+        title: en ? "Trade Shows, Events & Publications" : "Ferias, Eventos y Publicaciones",
+        questions: [
+          q("ee1", en ? "PSB's presence at trade shows and industry events is professional and impactful." : "La presencia de PSB en ferias y eventos del sector es profesional y tiene impacto."),
+          q("ee2", en ? "Field days and variety demonstration events organised by PSB are well-run and informative." : "Los días de campo y los eventos de demostración de variedades organizados por PSB están bien gestionados y son informativos."),
+          q("ee3", en ? "I have found value in technical publications, bulletins or articles authored or co-authored by PSB." : "He encontrado valor en publicaciones técnicas, boletines o artículos redactados o co-redactados por PSB."),
+          q("ee4", en ? "Which event or trade show has been most valuable for your relationship with PSB?" : "¿Qué evento o feria ha sido más valioso para tu relación con PSB?", "text"),
+          q("ee5", en ? "What types of events or publications would you like to see PSB invest more in?" : "¿En qué tipo de eventos o publicaciones te gustaría ver más inversión por parte de PSB?", "text"),
+        ],
+      },
+      {
+        id: "satisfaction", icon: "⭐",
+        title: en ? "Overall Satisfaction & Recommendations" : "Satisfacción Global y Recomendaciones",
+        questions: [
+          q("s1", en ? "Overall, I am satisfied with my partnership with PSB." : "En general, estoy satisfecho/a con mi asociación con PSB."),
+          q("s2", en ? "PSB consistently delivers on its commitments." : "PSB cumple de forma consistente con sus compromisos."),
+          q("s3", en ? "Compared to other breeders I work with, PSB offers superior overall value." : "Comparado con otros obtentores con los que trabajo, PSB ofrece un valor global superior."),
+          q("s4", en ? "I would recommend PSB varieties to another grower or nursery operator." : "Recomendaría las variedades de PSB a otro productor u operador de vivero."),
+          q("s5", en ? "I intend to continue and grow my business relationship with PSB over the next 3 years." : "Tengo intención de continuar y hacer crecer mi relación comercial con PSB en los próximos 3 años."),
+          q("s6", en ? "What is the single most important thing PSB could do to earn a higher rating from you?" : "¿Cuál es la cosa más importante que PSB podría hacer para merecer una valoración más alta de tu parte?", "text"),
+          q("s7", en ? "Any other comments, suggestions or ideas you would like to share with PSB?" : "¿Algún otro comentario, sugerencia o idea que te gustaría compartir con PSB?", "text"),
+        ],
+      },
+    ],
+  };
+
+  return { internal, external, likertLabels, freqLabels };
+}
+
+// ─── UI Components ────────────────────────────────────────────────────────────
+
+function LikertRow({ qid, value, onChange, labels }) {
+  const emojis = ["😞", "🙁", "😐", "🙂", "😊"];
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ display: "flex", gap: 6 }}>
+        {[1, 2, 3, 4, 5].map(v => {
+          const sel = value === v;
+          return (
+            <label key={v} style={{ flex: 1, cursor: "pointer" }}>
+              <input type="radio" name={qid} value={v} checked={sel} onChange={() => onChange(v)} style={{ display: "none" }} />
+              <div style={{ border: `2px solid ${sel ? C.amber : C.mist}`, borderRadius: 10, padding: "10px 4px", textAlign: "center", background: sel ? C.amber + "18" : C.white, transition: "all .18s", cursor: "pointer" }}>
+                <div style={{ fontSize: 20, marginBottom: 2 }}>{emojis[v - 1]}</div>
+                <div style={{ fontFamily: F.body, fontSize: 11, fontWeight: sel ? 700 : 400, color: sel ? C.amber : C.leaf }}>{v}</div>
+              </div>
+            </label>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+        <span style={{ fontFamily: F.body, fontSize: 10, color: C.sage }}>{labels[0]}</span>
+        <span style={{ fontFamily: F.body, fontSize: 10, color: C.sage }}>{labels[4]}</span>
+      </div>
+    </div>
+  );
+}
+
+function FreqRow({ qid, value, onChange, labels }) {
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+        {[1, 2, 3, 4, 5].map(v => {
+          const sel = value === v;
+          return (
+            <label key={v} style={{ cursor: "pointer", minWidth: 56, flex: 1 }}>
+              <input type="radio" name={qid} value={v} checked={sel} onChange={() => onChange(v)} style={{ display: "none" }} />
+              <div style={{ border: `2px solid ${sel ? C.fern : C.mist}`, borderRadius: 8, padding: "8px 4px", textAlign: "center", background: sel ? C.fern + "15" : C.white, transition: "all .18s", cursor: "pointer" }}>
+                <div style={{ fontFamily: F.body, fontSize: 10, fontWeight: sel ? 700 : 400, color: sel ? C.fern : C.leaf, lineHeight: 1.3 }}>{labels[v - 1]}</div>
+              </div>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MultiSelect({ qid, value, onChange, options }) {
+  const vals = value || [];
+  const toggle = (opt) => {
+    const next = vals.includes(opt) ? vals.filter(o => o !== opt) : [...vals, opt];
+    onChange(next);
+  };
+  return (
+    <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 7 }}>
+      {options.map(opt => {
+        const sel = vals.includes(opt);
+        return (
+          <div key={opt} onClick={() => toggle(opt)} style={{ padding: "7px 13px", borderRadius: 20, border: `2px solid ${sel ? C.fern : C.mist}`, background: sel ? C.fern + "18" : C.white, fontFamily: F.body, fontSize: 12, color: sel ? C.fern : C.bark, fontWeight: sel ? 700 : 400, cursor: "pointer", transition: "all .15s", userSelect: "none" }}>
+            {sel ? "✓ " : ""}{opt}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SingleSelect({ qid, value, onChange, options }) {
+  const channelIcons = { WhatsApp: "💬", Email: "📧", "Correo electrónico": "📧", Instagram: "📸", Facebook: "👥", LinkedIn: "💼", YouTube: "▶️" };
+  return (
+    <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+      {options.map(opt => {
+        const sel = value === opt;
+        return (
+          <div key={opt} onClick={() => onChange(opt)} style={{ padding: "12px 8px", borderRadius: 12, border: `2px solid ${sel ? C.amber : C.mist}`, background: sel ? C.amber + "15" : C.white, textAlign: "center", cursor: "pointer", transition: "all .18s", userSelect: "none" }}>
+            <div style={{ fontSize: 22, marginBottom: 4 }}>{channelIcons[opt] || "📱"}</div>
+            <div style={{ fontFamily: F.body, fontSize: 11, fontWeight: sel ? 700 : 400, color: sel ? C.amber : C.bark, lineHeight: 1.2 }}>{opt}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ScoreBar({ avg }) {
+  const color = avg >= 4 ? C.leaf : avg >= 3 ? C.gold : C.apricot;
+  return (
+    <div style={{ background: C.parch, borderRadius: 4, height: 8, overflow: "hidden", marginTop: 8 }}>
+      <div style={{ background: color, height: "100%", width: `${(avg / 5) * 100}%`, borderRadius: 4, transition: "width .6s ease" }} />
+    </div>
+  );
+}
+
+// ─── Results view ─────────────────────────────────────────────────────────────
+
+function Results({ responses, sections, lang, onBack }) {
+  const en = lang === "en";
+  const allNums = Object.values(responses).filter(v => typeof v === "number");
+  const overall = allNums.length
+    ? (allNums.reduce((a, b) => a + b, 0) / allNums.length).toFixed(1)
+    : "–";
+
+  const sectionScores = sections.map(sec => {
+    const vals = sec.questions
+      .filter(q => q.type === "likert" || q.type === "freq")
+      .map(q => responses[q.id])
+      .filter(v => typeof v === "number");
+    const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    return { id: sec.id, icon: sec.icon, title: sec.title, avg };
+  });
+
+  const textResponses = [];
+  sections.forEach(sec => {
+    sec.questions.filter(q => q.type === "text" && responses[q.id]).forEach(q => {
+      textResponses.push({ section: sec.title, icon: sec.icon, question: q.text, answer: responses[q.id] });
+    });
+  });
+
+  const multiResponses = [];
+  sections.forEach(sec => {
+    sec.questions.filter(q => (q.type === "multi" || q.type === "single") && responses[q.id]).forEach(q => {
+      const val = responses[q.id];
+      const answers = Array.isArray(val) ? val : [val];
+      if (answers.length) multiResponses.push({ section: sec.title, icon: sec.icon, question: q.text, answers });
+    });
+  });
+
+  return (
+    <div style={{ padding: "0 16px 40px" }}>
+      <div style={{ background: `linear-gradient(135deg, ${C.ink}, ${C.bark})`, borderRadius: 18, padding: "32px 24px", marginBottom: 22, textAlign: "center" }}>
+        <div style={{ fontFamily: F.body, fontSize: 10, color: C.sage, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>{en ? "Your Response Summary" : "Resumen de tu Respuesta"}</div>
+        <div style={{ fontFamily: F.display, fontSize: 64, color: C.gold, lineHeight: 1 }}>{overall}</div>
+        <div style={{ fontFamily: F.body, fontSize: 12, color: C.mist, marginTop: 6 }}>{en ? "/ 5.0 overall average" : "/ 5.0 media global"}</div>
+      </div>
+
+      <div style={{ fontFamily: F.display, fontSize: 22, color: C.ink, marginBottom: 12 }}>{en ? "Section Scores" : "Puntuaciones por Sección"}</div>
+      <div style={{ display: "grid", gap: 10, marginBottom: 24 }}>
+        {sectionScores.map(s => (
+          <div key={s.id} style={{ background: C.white, borderRadius: 12, padding: "14px 16px", border: `1px solid ${C.parch}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontFamily: F.body, fontWeight: 700, fontSize: 13, color: C.ink }}>{s.icon} {s.title}</div>
+              <div style={{ fontFamily: F.display, fontSize: 22, color: C.amber, fontWeight: 600 }}>{s.avg !== null ? s.avg.toFixed(1) : "–"}</div>
+            </div>
+            {s.avg !== null && <ScoreBar avg={s.avg} />}
+          </div>
+        ))}
+      </div>
+
+      {multiResponses.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontFamily: F.display, fontSize: 22, color: C.ink, marginBottom: 12 }}>{en ? "Your Selections" : "Tus Selecciones"}</div>
+          {multiResponses.map((r, i) => (
+            <div key={i} style={{ background: C.white, borderRadius: 12, padding: 16, border: `1px solid ${C.parch}`, marginBottom: 10 }}>
+              <div style={{ fontFamily: F.body, fontSize: 10, color: C.amber, fontWeight: 700, textTransform: "uppercase", letterSpacing: .5, marginBottom: 4 }}>{r.icon} {r.section}</div>
+              <div style={{ fontFamily: F.body, fontSize: 12, color: C.fern, fontStyle: "italic", marginBottom: 10 }}>{r.question}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {r.answers.map(a => (
+                  <div key={a} style={{ background: C.fern + "18", border: `1.5px solid ${C.leaf}`, borderRadius: 16, padding: "5px 10px", fontFamily: F.body, fontSize: 11, color: C.fern, fontWeight: 700 }}>✓ {a}</div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {textResponses.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontFamily: F.display, fontSize: 22, color: C.ink, marginBottom: 12 }}>{en ? "Your Open Responses" : "Tus Respuestas Abiertas"}</div>
+          {textResponses.map((r, i) => (
+            <div key={i} style={{ background: C.sand, borderLeft: `4px solid ${C.amber}`, borderRadius: "0 10px 10px 0", padding: "14px 16px", marginBottom: 10 }}>
+              <div style={{ fontFamily: F.body, fontSize: 10, color: C.amber, fontWeight: 700, textTransform: "uppercase", letterSpacing: .5, marginBottom: 3 }}>{r.icon} {r.section}</div>
+              <div style={{ fontFamily: F.body, fontSize: 12, color: C.fern, fontStyle: "italic", marginBottom: 6 }}>{r.question}</div>
+              <div style={{ fontFamily: F.body, fontSize: 13, color: C.ink, lineHeight: 1.6 }}>{r.answer}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button onClick={onBack} style={{ width: "100%", padding: 14, background: `linear-gradient(135deg, ${C.bark}, ${C.fern})`, color: C.white, border: "none", borderRadius: 10, fontFamily: F.body, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+        {en ? "← Back" : "← Volver"}
+      </button>
+    </div>
+  );
+}
+
+// ─── Top bar ──────────────────────────────────────────────────────────────────
+
+function TopBar({ lang, type, setLang, setType, resetSurvey }) {
+  const en = lang === "en";
+  return (
+    <div style={{ background: C.ink, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 30 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ width: 34, height: 34, background: `linear-gradient(135deg,${C.amber},${C.apricot})`, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>🍑</div>
+        <div>
+          <div style={{ fontFamily: F.display, fontSize: 14, color: C.cream, fontWeight: 600 }}>PSB Producción Vegetal</div>
+          <div style={{ fontFamily: F.body, fontSize: 10, color: C.sage }}>360° Survey</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 5 }}>
+        {[["internal", en ? "INTERNAL" : "INTERNO", C.fern], ["external", en ? "EXTERNAL" : "EXTERNO", C.amber]].map(([t, lbl, col]) => (
+          <button key={t} onClick={() => { setType(t); resetSurvey(); }}
+            style={{ padding: "5px 10px", background: type === t ? col : C.bark, color: type === t ? C.white : C.sage, border: "none", borderRadius: 7, fontFamily: F.body, fontSize: 10, fontWeight: 700, cursor: "pointer", transition: "all .18s" }}>{lbl}</button>
+        ))}
+        <div style={{ width: 1, background: C.fern, margin: "0 2px" }} />
+        {["en", "es"].map(l => (
+          <button key={l} onClick={() => { setLang(l); resetSurvey(); }}
+            style={{ padding: "5px 10px", background: lang === l ? C.rust : C.bark, color: lang === l ? C.white : C.sage, border: "none", borderRadius: 7, fontFamily: F.body, fontSize: 10, fontWeight: 700, cursor: "pointer", transition: "all .18s" }}>{l.toUpperCase()}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main App ─────────────────────────────────────────────────────────────────
+
+function App() {
+  const [lang, setLang]          = useState("en");
+  const [type, setType]          = useState("internal");
+  const [step, setStep]          = useState(-1);
+  const [responses, setRes]      = useState({});
+  const [role, setRole]          = useState("");
+  const [dept, setDept]          = useState("");
+  const [submitted, setSub]      = useState(false);
+  const [submitting, setSubbing] = useState(false);
+  const [submitError, setErr]    = useState("");
+  const [showRes, setShowRes]    = useState(false);
+
+  const { internal, external, likertLabels, freqLabels } = buildSurveys(lang);
+  const survey   = type === "internal" ? internal : external;
+  const sections = survey.sections;
+  const total    = sections.length;
+  const en       = lang === "en";
+
+  const setR = (id, val) => setRes(r => ({ ...r, [id]: val }));
+
+  const resetSurvey = () => {
+    setStep(-1); setRes({}); setRole(""); setDept("");
+    setSub(false); setSubbing(false); setErr(""); setShowRes(false);
+  };
+
+  const handleSubmit = async () => {
+    setSubbing(true);
+    setErr("");
+    const allNums = Object.values(responses).filter(v => typeof v === "number");
+    const overallScore = allNums.length
+      ? parseFloat((allNums.reduce((a, b) => a + b, 0) / allNums.length).toFixed(2))
+      : null;
+    const table = type === "internal" ? TABLE_INTERNAL : TABLE_EXTERNAL;
+    const fields = {
+      "Timestamp":          new Date().toISOString(),
+      "Language":           lang === "en" ? "English" : "Spanish",
+      "Role / Organisation": role || "",
+      "Country / Region":   dept || "",
+      "Survey Type":        type === "internal" ? "Internal" : "External",
+      "Overall Score":      overallScore,
+      "All Responses":      JSON.stringify(responses),
+    };
+    try {
+      if (AIRTABLE_KEY !== "YOUR_AIRTABLE_PERSONAL_ACCESS_TOKEN") {
+        const res = await fetch(
+          `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(table)}`,
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${AIRTABLE_KEY}`,
+              "Content-Type":  "application/json",
+            },
+            body: JSON.stringify({ fields }),
+          }
+        );
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error?.message || "Airtable error");
+        }
+      }
+      setSub(true);
+    } catch (e) {
+      setErr(en
+        ? `Could not save your response: ${e.message}. Please try again.`
+        : `No se pudo guardar tu respuesta: ${e.message}. Por favor inténtalo de nuevo.`);
+    } finally {
+      setSubbing(false);
+    }
+  };
+
+  const pct = step < 0 ? 0 : Math.round(((step + 1) / total) * 100);
+
+  if (submitted && !showRes) {
+    return (
+      <div style={{ minHeight: "100vh", background: C.sand }}>
+        <style>{FONTS}</style>
+        <TopBar lang={lang} type={type} setLang={setLang} setType={setType} resetSurvey={resetSurvey} />
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "80vh", padding: "24px 16px", textAlign: "center" }}>
+          <div style={{ fontSize: 72, marginBottom: 16 }}>🌳</div>
+          <div style={{ fontFamily: F.display, fontSize: 32, color: C.ink, marginBottom: 10 }}>{en ? "Thank you" : "Gracias"}</div>
+          <div style={{ fontFamily: F.body, fontSize: 15, color: C.fern, maxWidth: 340, lineHeight: 1.7, marginBottom: 32 }}>
+            {en
+              ? "Your response has been recorded. Only PSB management can see the aggregated results."
+              : "Tu respuesta ha sido registrada. Solo la dirección de PSB puede ver los resultados agregados."}
+          </div>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+            <button onClick={() => setShowRes(true)} style={{ padding: "12px 22px", background: `linear-gradient(135deg,${C.amber},${C.rust})`, color: C.white, border: "none", borderRadius: 10, fontFamily: F.body, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+              {en ? "View My Summary →" : "Ver mi resumen →"}
+            </button>
+            <button onClick={resetSurvey} style={{ padding: "12px 22px", background: `linear-gradient(135deg,${C.fern},${C.leaf})`, color: C.white, border: "none", borderRadius: 10, fontFamily: F.body, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+              {en ? "Submit Another" : "Enviar otra respuesta"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (showRes) {
+    return (
+      <div style={{ minHeight: "100vh", background: C.sand }}>
+        <style>{FONTS}</style>
+        <TopBar lang={lang} type={type} setLang={setLang} setType={setType} resetSurvey={resetSurvey} />
+        <div style={{ maxWidth: 640, margin: "0 auto" }}>
+          <Results responses={responses} sections={sections} lang={lang} onBack={() => setShowRes(false)} />
+        </div>
+      </div>
+    );
+  }
+
+  if (step === -1) {
+    return (
+      <div style={{ minHeight: "100vh", background: C.sand }}>
+        <style>{FONTS}</style>
+        <TopBar lang={lang} type={type} setLang={setLang} setType={setType} resetSurvey={resetSurvey} />
+        <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 16px 40px" }}>
+          <div style={{ background: `linear-gradient(145deg, ${C.ink} 0%, ${C.bark} 60%, ${C.fern} 100%)`, borderRadius: "0 0 24px 24px", padding: "40px 28px 36px", marginBottom: 24, position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: -30, right: -30, fontSize: 160, opacity: .05, pointerEvents: "none" }}>🍑</div>
+            <div style={{ fontFamily: F.body, fontSize: 10, color: C.sage, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>
+              {type === "internal" ? (en ? "For PSB Team Members" : "Para el Equipo PSB") : (en ? "For Nursery & Commercial Partners" : "Para Viveros y Socios Comerciales")}
+            </div>
+            <div style={{ fontFamily: F.display, fontSize: 34, color: C.cream, lineHeight: 1.15, marginBottom: 10 }}>{survey.title}</div>
+            <div style={{ fontFamily: F.body, fontSize: 13, color: C.sage }}>{survey.subtitle}</div>
+          </div>
+
+          <div style={{ background: C.white, borderRadius: 16, padding: 22, marginBottom: 18, border: `1px solid ${C.parch}` }}>
+            <p style={{ fontFamily: F.body, fontSize: 14, color: C.fern, lineHeight: 1.75, margin: "0 0 20px" }}>{survey.intro}</p>
+            <div style={{ display: "grid", gap: 10 }}>
+              <div>
+                <label style={{ fontFamily: F.body, fontSize: 11, color: C.leaf, fontWeight: 700, display: "block", marginBottom: 5, textTransform: "uppercase", letterSpacing: .5 }}>
+                  {type === "internal" ? (en ? "Your Role (optional)" : "Tu Rol (opcional)") : (en ? "Your Organisation (optional)" : "Tu Organización (opcional)")}
+                </label>
+                <input value={role} onChange={e => setRole(e.target.value)} placeholder={survey.rolePlaceholder}
+                  style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${C.mist}`, borderRadius: 9, fontFamily: F.body, fontSize: 13, color: C.ink, outline: "none", boxSizing: "border-box", background: C.sand }} />
+              </div>
+              <div>
+                <label style={{ fontFamily: F.body, fontSize: 11, color: C.leaf, fontWeight: 700, display: "block", marginBottom: 5, textTransform: "uppercase", letterSpacing: .5 }}>
+                  {en ? "Country / Region (optional)" : "País / Región (opcional)"}
+                </label>
+                <input value={dept} onChange={e => setDept(e.target.value)} placeholder={survey.deptPlaceholder}
+                  style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${C.mist}`, borderRadius: 9, fontFamily: F.body, fontSize: 13, color: C.ink, outline: "none", boxSizing: "border-box", background: C.sand }} />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontFamily: F.body, fontSize: 11, color: C.leaf, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
+              {en
+                ? `${total} sections · ${sections.reduce((a, s) => a + s.questions.length, 0)} questions`
+                : `${total} secciones · ${sections.reduce((a, s) => a + s.questions.length, 0)} preguntas`}
+            </div>
+            <div style={{ display: "grid", gap: 8 }}>
+              {sections.map((s, i) => (
+                <div key={s.id} style={{ background: C.white, borderRadius: 10, padding: "11px 14px", border: `1px solid ${C.parch}`, display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ fontSize: 20 }}>{s.icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: F.body, fontSize: 10, color: C.amber, fontWeight: 700, letterSpacing: .5 }}>{en ? `Section ${i + 1}` : `Sección ${i + 1}`}</div>
+                    <div style={{ fontFamily: F.display, fontSize: 15, color: C.ink }}>{s.title}</div>
+                  </div>
+                  <div style={{ fontFamily: F.body, fontSize: 11, color: C.sage }}>{s.questions.length}q</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button onClick={() => setStep(0)} style={{ width: "100%", padding: 16, background: `linear-gradient(135deg,${C.amber},${C.rust})`, color: C.white, border: "none", borderRadius: 12, fontFamily: F.body, fontWeight: 700, fontSize: 15, cursor: "pointer", letterSpacing: .5 }}>
+            {en ? "Begin Survey →" : "Iniciar encuesta →"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const sec = sections[step];
+  return (
+    <div style={{ minHeight: "100vh", background: C.sand }}>
+      <style>{FONTS}</style>
+      <TopBar lang={lang} type={type} setLang={setLang} setType={setType} resetSurvey={resetSurvey} />
+      <div style={{ background: C.parch, height: 4, position: "sticky", top: 0, zIndex: 20 }}>
+        <div style={{ background: `linear-gradient(90deg,${C.amber},${C.apricot})`, height: "100%", width: `${pct}%`, transition: "width .4s ease" }} />
+      </div>
+
+      <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 16px 40px" }}>
+        <div style={{ padding: "22px 0 16px" }}>
+          <div style={{ fontFamily: F.body, fontSize: 10, color: C.amber, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4 }}>
+            {en ? `Section ${step + 1} of ${total}` : `Sección ${step + 1} de ${total}`}
+          </div>
+          <div style={{ fontFamily: F.display, fontSize: 26, color: C.ink, display: "flex", alignItems: "center", gap: 10 }}>
+            <span>{sec.icon}</span> {sec.title}
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gap: 13, marginBottom: 24 }}>
+          {sec.questions.map((q, qi) => (
+            <div key={q.id} style={{ background: C.white, borderRadius: 14, padding: "18px 18px 20px", border: `1px solid ${C.parch}` }}>
+              <div style={{ fontFamily: F.body, fontSize: 13.5, color: C.ink, lineHeight: 1.65 }}>
+                <span style={{ color: C.amber, fontWeight: 700, marginRight: 6 }}>{qi + 1}.</span>{q.text}
+              </div>
+              {q.type === "likert" && (
+                <LikertRow qid={q.id} value={responses[q.id]} onChange={v => setR(q.id, v)} labels={likertLabels} />
+              )}
+              {q.type === "freq" && (
+                <FreqRow qid={q.id} value={responses[q.id]} onChange={v => setR(q.id, v)} labels={freqLabels} />
+              )}
+              {q.type === "multi" && (
+                <MultiSelect qid={q.id} value={responses[q.id]} onChange={v => setR(q.id, v)} options={q.opts.options} />
+              )}
+              {q.type === "single" && (
+                <SingleSelect qid={q.id} value={responses[q.id]} onChange={v => setR(q.id, v)} options={q.opts.options} />
+              )}
+              {q.type === "text" && (
+                <textarea
+                  value={responses[q.id] || ""}
+                  onChange={e => setR(q.id, e.target.value)}
+                  placeholder={en ? "Share your thoughts…" : "Comparte tus reflexiones…"}
+                  rows={3}
+                  style={{ width: "100%", marginTop: 12, padding: "10px 12px", border: `1.5px solid ${C.mist}`, borderRadius: 9, fontFamily: F.body, fontSize: 13, color: C.ink, outline: "none", resize: "vertical", boxSizing: "border-box", background: C.sand, lineHeight: 1.6 }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {submitError && (
+          <div style={{ background: "#fdecea", border: `1.5px solid ${C.apricot}`, borderRadius: 10, padding: "12px 16px", marginBottom: 14, fontFamily: F.body, fontSize: 13, color: C.rust }}>
+            {submitError}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={() => step === 0 ? setStep(-1) : setStep(step - 1)}
+            style={{ flex: "0 0 auto", padding: "14px 18px", background: C.white, color: C.fern, border: `2px solid ${C.mist}`, borderRadius: 10, fontFamily: F.body, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+            ←
+          </button>
+          {step < total - 1 ? (
+            <button onClick={() => setStep(step + 1)}
+              style={{ flex: 1, padding: 14, background: `linear-gradient(135deg,${C.fern},${C.leaf})`, color: C.white, border: "none", borderRadius: 10, fontFamily: F.body, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+              {en ? "Next Section →" : "Siguiente →"}
+            </button>
+          ) : (
+            <button onClick={handleSubmit} disabled={submitting}
+              style={{ flex: 1, padding: 14, background: submitting ? C.sage : `linear-gradient(135deg,${C.amber},${C.rust})`, color: C.white, border: "none", borderRadius: 10, fontFamily: F.body, fontWeight: 700, fontSize: 14, cursor: submitting ? "not-allowed" : "pointer", transition: "all .2s" }}>
+              {submitting ? (en ? "Saving…" : "Guardando…") : (en ? "Submit Survey ✓" : "Enviar encuesta ✓")}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
